@@ -22,13 +22,28 @@ jobs:
           git remote add upstream https://github.com/minhaz725/Automated-Rail-Ticket-Booker-And-Notifier.git
           git fetch upstream
 
-      - name: Merge Upstream Changes
-        run: |
-          git checkout main
-          git merge upstream/main --allow-unrelated-histories
-
-      - name: Push Changes
+      - name: Sync All Branches
         env:
           PAT_TOKEN: ${{ secrets.PAT_TOKEN }}
         run: |
-          git push https://${{ secrets.PAT_TOKEN }}@github.com/${{ github.repository }}.git main
+          # Fetch all branches from upstream
+          git fetch upstream
+
+          # List all remote branches from upstream
+          branches=$(git branch -r | grep 'upstream/' | sed 's|upstream/||')
+
+          # Loop through each branch and sync
+          for branch in $branches; do
+            # Checkout or create the branch locally
+            if git rev-parse --verify --quiet $branch; then
+              git checkout $branch
+            else
+              git checkout -b $branch
+            fi
+
+            # Merge changes from upstream
+            git merge upstream/$branch --allow-unrelated-histories
+
+            # Push changes back to the fork
+            git push https://${{ secrets.PAT_TOKEN }}@github.com/${{ github.repository }}.git $branch
+          done
